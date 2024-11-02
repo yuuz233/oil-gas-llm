@@ -17,7 +17,9 @@ if 'openai_api_key' not in st.session_state:
 # Sidebar for API key
 with st.sidebar:
     st.header("Configuration")
-    api_key = st.text_input("Enter your OpenAI API key:", type="password")
+    DEV_API_KEY = "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"
+    api_key = st.text_input("Enter your OpenAI API key:",
+                            type="password", value=DEV_API_KEY)
     if api_key:
         st.session_state.openai_api_key = api_key
 

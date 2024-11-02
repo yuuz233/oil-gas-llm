@@ -28,9 +28,7 @@ def setup_vector_store(docs):
 # Example documents for retrieval
 '''
 docs = [
-    {"text": "LangChain enables you to build applications with LLMs."},
-    {"text": "Retrieval-Augmented Generation combines retrieval with generation for accurate answers."},
-    # Add more documents as needed
+    {"text": "This is some ui element."},
 ]
 '''
 docs = [
