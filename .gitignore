@@ -43,7 +43,6 @@ htmlcov/
 .coverage
 # Start of Selection
 .coverage.*
-/dev
 # End of Selection
 .cache
 nosetests.xml
