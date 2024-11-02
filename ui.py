@@ -11,14 +11,14 @@ from langchain.tools import Tool
 import os
 
 # Initialize LangChain LLM
-llm = OpenAI(temperature=0.7, openai_api_key="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")
+OPENAI_API_KEY = "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"
+llm = OpenAI(temperature=0.7, openai_api_key=OPENAI_API_KEY)
 
 # Set up the document retriever (using FAISS in this example)
 
 
 def setup_vector_store(docs):
-    embeddings = OpenAIEmbeddings(
-        openai_api_key="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")
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     split_docs = text_splitter.split_documents(docs)
     vector_store = FAISS.from_documents(split_docs, embeddings)
