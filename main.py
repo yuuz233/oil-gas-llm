@@ -13,11 +13,36 @@ from langchain.memory import ConversationBufferMemory
 from langchain.tools import Tool
 from langchain.schema import Document
 import fitz
+import requests  # Import requests
+
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain_text_splitters import CharacterTextSplitter
 from typing import List, Dict, Any
 DEV_API_KEY = "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"
+
+
+import plotly.graph_objects as go
+
+def plot_predictions(predictions):
+    """Generate a Plotly graph for the model predictions."""
+    days = [entry['days_on_production'] for entry in predictions]
+    P50_rates = [entry['prediction']['P50_rate'] for entry in predictions]
+
+    # Create a line plot
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=days, y=P50_rates, mode='lines+markers', name='P50 Rate', line=dict(color='orange')))
+
+    fig.update_layout(
+        title='Reservoir Production Predictions',
+        xaxis_title='Days on Production',
+        yaxis_title='Production Rate (STB/day)',
+        legend_title='Prediction Percentiles',
+        template='plotly_white'
+    )
+
+    return fig
 
 
 def load_pdf_as_documents(pdf_path: Path) -> List[Document]:
@@ -136,33 +161,60 @@ def execute_model(query: str) -> str:
     for param, value_range in param_ranges.items():
         # Generate initial random value
         initial_value = generate_random_value(value_range)
+        generated_params[param] = initial_value
 
-        # Display current parameter and value
-        st.write(f"\n📊 Parameter: {param}")
-        st.write(f"Generated value: {initial_value:.2f}")
-        st.write(f"Valid range: {value_range[0]} to {value_range[1]}")
+    # Display final parameters as JSON
+    st.write("🎯 Final Parameters (in JSON format):")
+    st.session_state.params = (generated_params)
+    st.json(st.session_state.params)    
 
-        # Ask if user wants to modify
-        new_value = st.number_input(
-            f"Enter value for {param}",
-            min_value=float(value_range[0]),
-            max_value=float(value_range[1]),
-            value=float(initial_value),
-            key=f"input_{param}"
-        )
-        generated_params[param] = new_value
+    # Attempt to send parameters to the model server
+    try:
+        print("Sending parameters to model server")
+        response = requests.post("http://127.0.0.1:8000/predict", json=generated_params)  # Replace with your server URL
+        
+        if response.status_code == 200:
+            predictions = response.json()
+            st.session_state.predictions = predictions  # Store predictions in session state
+            st.write("### Predictions")
+            
+            # Plot the predictions
+            fig = plot_predictions(predictions)
+            st.plotly_chart(fig)
+        else:
+            st.error("Failed to retrieve predictions.")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error during model execution: {e}")
+        return "Model execution failed."
 
-        st.markdown("---")
+    return "Model executed successfully."
 
-    # Format the results as JSON
-    result = json.dumps(generated_params, indent=2)
+def request_parameters_from_llm(prompt: str) -> Dict[str, float]:
+    """Request parameter values from the LLM based on the user's prompt."""
+    # Define the prompt for the LLM
+    llm_prompt = f"Given the question: '{prompt}', suggest the best parameters for the reservoir model within the following ranges:\n"
+    llm_prompt += json.dumps(get_default_param_ranges())
 
-    # Display final parameters
-    st.write("🎯 Final Parameters:")
-    st.json(generated_params)
+    # Call the LLM API
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {DEV_API_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": "gpt-3.5-turbo",  # or any other model you want to use
+            "messages": [{"role": "user", "content": llm_prompt}],
+            "temperature": 0.5,
+        }
+    )
 
-    return f"Model execution completed with parameters: {result}"
-
+    if response.status_code == 200:
+        response_data = response.json()
+        # Parse the response to extract parameters
+        generated_params = json.loads(response_data['choices'][0]['message']['content'])
+        return generated_params
+    else:
+        st.error(f"LLM request failed: {response.text}")
+        return {}
 
 # Set page config
 st.set_page_config(
@@ -170,7 +222,13 @@ st.set_page_config(
     page_icon="🤖",
     layout="wide"
 )
-
+if 'params' in st.session_state:
+    st.write("### Previous Parameters")
+    st.json(st.session_state.params)
+if 'predictions' in st.session_state:
+    st.write("### Previous Predictions")
+    fig = plot_predictions(st.session_state.predictions)
+    st.plotly_chart(fig)
 # Initialize session state for OpenAI API key
 if 'openai_api_key' not in st.session_state:
     st.session_state.openai_api_key = ''
