@@ -2,6 +2,7 @@ import os
 import random
 from typing import Dict, Tuple, Any
 import json
+from pathlib import Path
 
 import streamlit as st
 from langchain.agents import AgentType, initialize_agent, load_tools
@@ -19,33 +20,35 @@ from typing import List, Dict, Any
 DEV_API_KEY = "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"
 
 
-def load_pdf_as_documents(pdf_path):
+def load_pdf_as_documents(pdf_path: Path) -> List[Document]:
     """
     Load a PDF file and convert each page into a LangChain Document object.
     """
     documents = []
-    with fitz.open(pdf_path) as pdf:
+    with fitz.open(str(pdf_path)) as pdf:
         for page_num in range(len(pdf)):
             page = pdf[page_num]
             text = page.get_text("text")
-            documents.append(Document(page_content=text,
-                             metadata={"page": page_num + 1}))
+            documents.append(Document(
+                page_content=text,
+                metadata={"page": page_num + 1, "source": pdf_path.name}
+            ))
     return documents
 
 
-def load_pdfs_from_directory(directory):
+def load_pdfs_from_directory(directory: Path) -> List[Document]:
+    """Load all PDFs from a directory using platform-independent paths"""
     pdf_documents = []
-    for filename in os.listdir(directory):
-        if filename.endswith(".pdf"):
-            pdf_path = os.path.join(directory, filename)
-            pdf_documents.extend(load_pdf_as_documents(pdf_path))
+    for pdf_path in directory.glob("*.pdf"):
+        pdf_documents.extend(load_pdf_as_documents(pdf_path))
     return pdf_documents
 
 
-pdf_directory = os.path.dirname(os.path.abspath(__file__))
-print("Loading pdf")
-pdf_docs = load_pdfs_from_directory(pdf_directory)
-print("pdf loaded")
+# Get the directory containing the script
+script_dir = Path(__file__).parent.resolve()
+print(f"Loading PDFs from: {script_dir}")
+pdf_docs = load_pdfs_from_directory(script_dir)
+print(f"Loaded {len(pdf_docs)} PDF documents")
 
 
 def setup_vector_store(docs):
@@ -93,6 +96,7 @@ def vector_search_iris(query: str) -> Dict[str, Any]:
         "metadata": {"source": "IRIS Vector Store"}
     }
 
+
 def get_default_param_ranges() -> Dict[str, Tuple[float, float]]:
     """Define default parameter ranges"""
     return {
@@ -108,6 +112,7 @@ def get_default_param_ranges() -> Dict[str, Tuple[float, float]]:
         "flowing_pressure": (500, 4000),
     }
 
+
 def generate_random_value(param_range: Tuple[float, float]) -> float:
     """Generate a random value within the given range"""
     min_val, max_val = param_range
@@ -115,27 +120,28 @@ def generate_random_value(param_range: Tuple[float, float]) -> float:
         return random.randint(min_val, max_val)
     return random.uniform(min_val, max_val)
 
+
 def execute_model(query: str) -> str:
     """
     Execute the model with interactive parameter generation
     """
     param_ranges = get_default_param_ranges()
     generated_params = {}
-    
+
     # Initialize chat
     st.write("Let's generate parameters for the model.")
     st.write("I'll generate random values, but you can adjust them if needed.")
-    
+
     # Generate and potentially modify each parameter
     for param, value_range in param_ranges.items():
         # Generate initial random value
         initial_value = generate_random_value(value_range)
-        
+
         # Display current parameter and value
         st.write(f"\n📊 Parameter: {param}")
         st.write(f"Generated value: {initial_value:.2f}")
         st.write(f"Valid range: {value_range[0]} to {value_range[1]}")
-        
+
         # Ask if user wants to modify
         if st.button(f"Modify {param}?", key=f"modify_{param}"):
             new_value = st.number_input(
@@ -147,17 +153,18 @@ def execute_model(query: str) -> str:
             generated_params[param] = new_value
         else:
             generated_params[param] = initial_value
-        
+
         st.markdown("---")
-    
+
     # Format the results as JSON
     result = json.dumps(generated_params, indent=2)
-    
+
     # Display final parameters
     st.write("🎯 Final Parameters:")
     st.json(generated_params)
-    
+
     return f"Model execution completed with parameters: {result}"
+
 
 # Set page config
 st.set_page_config(
