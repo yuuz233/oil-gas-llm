@@ -12,6 +12,7 @@ import fitz
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain_text_splitters import CharacterTextSplitter
+DEV_API_KEY = "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"
 
 
 def load_pdf_as_documents(pdf_path):
@@ -23,8 +24,10 @@ def load_pdf_as_documents(pdf_path):
         for page_num in range(len(pdf)):
             page = pdf[page_num]
             text = page.get_text("text")
-            documents.append(Document(page_content=text, metadata={"page": page_num + 1}))
+            documents.append(Document(page_content=text,
+                             metadata={"page": page_num + 1}))
     return documents
+
 
 def load_pdfs_from_directory(directory):
     pdf_documents = []
@@ -34,17 +37,21 @@ def load_pdfs_from_directory(directory):
             pdf_documents.extend(load_pdf_as_documents(pdf_path))
     return pdf_documents
 
+
 pdf_directory = "documents"
 print("Loading pdf")
 pdf_docs = load_pdfs_from_directory(pdf_directory)
 print("pdf loaded")
 
+
 def setup_vector_store(docs):
-    embeddings = OpenAIEmbeddings(openai_api_key="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")
+    embeddings = OpenAIEmbeddings(
+        openai_api_key="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")
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     split_docs = text_splitter.split_documents(docs)
     vector_store = FAISS.from_documents(split_docs, embeddings)
     return vector_store.as_retriever()
+
 
 retriever = setup_vector_store(pdf_docs)
 
@@ -59,11 +66,14 @@ If the question is factual, retrieve documents. If it requires computation, run 
 Question: {question}
 """
 
-prompt_template = PromptTemplate(input_variables=["question"], template=agent_prompt)
+prompt_template = PromptTemplate(
+    input_variables=["question"], template=agent_prompt)
+
 
 def external_model_run(question):
     # Replace this with the actual external model logic
     return "Running external model for computational query."
+
 
 # Set page config
 st.set_page_config(
@@ -87,17 +97,17 @@ with st.sidebar:
 st.title("🤖 LangChain Agent Interface")
 
 if False:
-#if not st.session_state.openai_api_key:
+    # if not st.session_state.openai_api_key:
     st.warning("Please enter your OpenAI API key in the sidebar to continue.")
 else:
     try:
         # Initialize LangChain components
-        llm = OpenAI(temperature=0.7,
-                     openai_api_key="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")
+        llm = OpenAI(temperature=0.7, openai_api_key=DEV_API_KEY)
 
         # Define the RetrievalQA chain
-        retrieval_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
-        #tools = load_tools(["wikipedia", "llm-math"], llm=llm)
+        retrieval_chain = RetrievalQA.from_chain_type(
+            llm=llm, chain_type="stuff", retriever=retriever)
+        # tools = load_tools(["wikipedia", "llm-math"], llm=llm)
         memory = ConversationBufferMemory(memory_key="chat_history")
 
         retrieval_tool = Tool(
