@@ -130,7 +130,7 @@ def execute_model(query: str) -> str:
 
     # Initialize chat
     st.write("Let's generate parameters for the model.")
-    st.write("I'll generate random values, but you can adjust them if needed.")
+    st.write("I'll generate values based on physical properties, but you can adjust them if needed.")
 
     # Generate and potentially modify each parameter
     for param, value_range in param_ranges.items():
@@ -143,16 +143,14 @@ def execute_model(query: str) -> str:
         st.write(f"Valid range: {value_range[0]} to {value_range[1]}")
 
         # Ask if user wants to modify
-        if st.button(f"Modify {param}?", key=f"modify_{param}"):
-            new_value = st.number_input(
-                f"Enter new value for {param}",
-                min_value=float(value_range[0]),
-                max_value=float(value_range[1]),
-                value=float(initial_value)
-            )
-            generated_params[param] = new_value
-        else:
-            generated_params[param] = initial_value
+        new_value = st.number_input(
+            f"Enter value for {param}",
+            min_value=float(value_range[0]),
+            max_value=float(value_range[1]),
+            value=float(initial_value),
+            key=f"input_{param}"
+        )
+        generated_params[param] = new_value
 
         st.markdown("---")
 
@@ -180,7 +178,8 @@ if 'openai_api_key' not in st.session_state:
 # Sidebar for API key
 with st.sidebar:
     st.header("Configuration")
-    api_key = st.text_input("Enter your OpenAI API key:", type="password")
+    api_key = st.text_input("Enter your OpenAI API key:",
+                            type="password", value=DEV_API_KEY)
     if api_key:
         st.session_state.openai_api_key = api_key
 

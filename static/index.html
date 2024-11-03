@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retro Chatbot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+
+    body {
+      background-color: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 600px;
+      height: 600px;
+      background-color: black;
+      border: 4px solid #22c55e;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .decorative-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .oil-rig-left {
+      position: absolute;
+      left: 10px;
+      bottom: 20px;
+      width: 80px;
+      height: 160px;
+      opacity: 0.3;
+    }
+
+    .oil-rig-right {
+      position: absolute;
+      right: 10px;
+      bottom: 20px;
+      width: 80px;
+      height: 160px;
+      opacity: 0.3;
+    }
+
+    .oil-well {
+      position: absolute;
+      width: 40px;
+      height: 60px;
+      opacity: 0.3;
+    }
+
+    .oil-well-1 {
+      left: 100px;
+      bottom: 40px;
+    }
+
+    .oil-well-2 {
+      right: 100px;
+      bottom: 40px;
+    }
+
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #22c55e;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chat-title {
+      color: #22c55e;
+      font-size: 24px;
+    }
+
+    .power-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background-color: #22c55e;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+    }
+
+    .power-btn.off {
+      background-color: #dc2626;
+    }
+
+    .power-icon {
+      width: 20px;
+      height: 20px;
+      border: 2px solid black;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .power-icon::after {
+      content: "";
+      position: absolute;
+      top: -8px;
+      left: 7px;
+      width: 2px;
+      height: 10px;
+      background-color: black;
+    }
+
+    .api-key-form {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .messages-container {
+      flex-grow: 1;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: #22c55e #1f2937;
+      position: relative;
+      z-index: 1;
+    }
+
+    .messages-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .messages-container::-webkit-scrollbar-track {
+      background: #1f2937;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb {
+      background-color: #22c55e;
+      border-radius: 4px;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      max-width: 80%;
+      padding: 10px;
+      border-radius: 8px;
+      word-wrap: break-word;
+    }
+
+    .message.bot {
+      background-color: #1f2937;
+      color: #22c55e;
+      border: 1px solid #22c55e;
+      align-self: flex-start;
+    }
+
+    .message.user {
+      background-color: #22c55e;
+      color: black;
+      margin-left: auto;
+    }
+
+    .input-form {
+      display: flex;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    input {
+      flex-grow: 1;
+      background-color: #1f2937;
+      border: 2px solid #22c55e;
+      color: #22c55e;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    input:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5);
+    }
+
+    input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #22c55e;
+      color: black;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #16a34a;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .crt-effect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%,
+          rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 2;
+    }
+
+    .crt-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg,
+          rgba(0, 0, 0, 0.15),
+          rgba(0, 0, 0, 0.15) 1px,
+          transparent 1px,
+          transparent 2px);
+      z-index: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="chat-container">
+    <div class="decorative-container">
+      <svg class="oil-rig-left" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200">
+        <g stroke="#22c55e" fill="none" stroke-width="2">
+          <line x1="20" y1="200" x2="80" y2="200" />
+          <line x1="30" y1="200" x2="30" y2="40" />
+          <line x1="70" y1="200" x2="70" y2="40" />
+          <line x1="30" y1="160" x2="70" y2="140" />
+          <line x1="30" y1="120" x2="70" y2="100" />
+          <line x1="30" y1="80" x2="70" y2="60" />
+          <rect x="25" y="20" width="50" height="20" />
+          <polygon points="35,20 50,5 65,20" />
+          <line x1="40" y1="40" x2="60" y2="40" />
+          <line x1="45" y1="60" x2="55" y2="60" />
+          <line x1="48" y1="80" x2="52" y2="80" />
+        </g>
+      </svg>
+      <svg class="oil-rig-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200">
+        <g stroke="#22c55e" fill="none" stroke-width="2">
+          <line x1="20" y1="200" x2="80" y2="200" />
+          <line x1="30" y1="200" x2="30" y2="40" />
+          <line x1="70" y1="200" x2="70" y2="40" />
+          <line x1="30" y1="160" x2="70" y2="140" />
+          <line x1="30" y1="120" x2="70" y2="100" />
+          <line x1="30" y1="80" x2="70" y2="60" />
+          <rect x="25" y="20" width="50" height="20" />
+          <polygon points="35,20 50,5 65,20" />
+          <line x1="40" y1="40" x2="60" y2="40" />
+          <line x1="45" y1="60" x2="55" y2="60" />
+          <line x1="48" y1="80" x2="52" y2="80" />
+        </g>
+      </svg>
+      <svg class="oil-well oil-well-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 80">
+        <g stroke="#22c55e" fill="none" stroke-width="2">
+          <line x1="10" y1="80" x2="40" y2="80" />
+          <path d="M15,60 Q25,40 35,60" />
+          <line x1="25" y1="40" x2="25" y2="20" />
+          <path d="M20,20 L30,20 L25,15 Z" />
+          <line x1="15" y1="60" x2="35" y2="60" />
+        </g>
+      </svg>
+      <svg class="oil-well oil-well-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 80">
+        <g stroke="#22c55e" fill="none" stroke-width="2">
+          <line x1="10" y1="80" x2="40" y2="80" />
+          <path d="M15,60 Q25,40 35,60" />
+          <line x1="25" y1="40" x2="25" y2="20" />
+          <path d="M20,20 L30,20 L25,15 Z" />
+          <line x1="15" y1="60" x2="35" y2="60" />
+        </g>
+      </svg>
+    </div>
+    <div class="chat-header">
+      <h1 class="chat-title">LANGCHAIN ARCADE</h1>
+      <button class="power-btn" id="powerButton">
+        <div class="power-icon"></div>
+      </button>
+    </div>
+
+    <form id="apiKeyForm" class="api-key-form">
+      <input type="password" id="apiKeyInput" placeholder="ENTER OPENAI API KEY" required />
+      <button type="submit">SET KEY</button>
+    </form>
+
+    <div class="messages-container" id="messagesContainer">
+      <div class="message bot">WELCOME TO LANGCHAIN ARCADE</div>
+      <div class="message bot">PLEASE ENTER YOUR OPENAI API KEY TO BEGIN</div>
+    </div>
+
+    <form id="chatForm" class="input-form">
+      <input type="text" id="messageInput" placeholder="SYSTEM OFFLINE" disabled />
+      <button type="submit" disabled>SEND</button>
+    </form>
+
+    <div class="crt-effect"></div>
+    <div class="crt-lines"></div>
+  </div>
+
+  <script>
+    const powerButton = document.getElementById("powerButton");
+    const apiKeyForm = document.getElementById("apiKeyForm");
+    const chatForm = document.getElementById("chatForm");
+    const messageInput = document.getElementById("messageInput");
+    const messagesContainer = document.getElementById("messagesContainer");
+
+    let isPowered = true;
+    let isKeySet = false;
+    let isLoading = false;
+
+    // Power button functionality
+    powerButton.addEventListener("click", () => {
+      isPowered = !isPowered;
+      powerButton.classList.toggle("off");
+      updateInputState();
+
+      if (!isPowered) {
+        addMessage("SYSTEM POWERING DOWN...", "bot");
+      } else {
+        addMessage("SYSTEM POWERING UP...", "bot");
+      }
+    });
+
+    // API Key submission
+    apiKeyForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const apiKey = document.getElementById("apiKeyInput").value;
+
+      if (apiKey.trim()) {
+        isKeySet = true;
+        apiKeyForm.style.display = "none";
+        addMessage("API KEY ACCEPTED - SYSTEM INITIALIZED", "bot");
+        addMessage("READY FOR YOUR QUERIES", "bot");
+        updateInputState();
+      }
+    });
+
+    // Chat form submission
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!messageInput.value.trim() || !isPowered || !isKeySet || isLoading)
+        return;
+
+      const message = messageInput.value;
+      addMessage(message.toUpperCase(), "user");
+      messageInput.value = "";
+      isLoading = true;
+      updateInputState();
+
+      try {
+        const response = await fetch("your-streamlit-endpoint", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKeyInput.value}`,
+          },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await response.json();
+        addMessage(data.response.toUpperCase(), "bot");
+      } catch (error) {
+        addMessage("ERROR: UNABLE TO PROCESS QUERY", "bot");
+      } finally {
+        isLoading = false;
+        updateInputState();
+      }
+    });
+    function addMessage(text, sender) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("message", sender);
+      messageDiv.textContent = text;
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function updateInputState() {
+      const isDisabled = !isPowered || !isKeySet || isLoading;
+      messageInput.disabled = isDisabled;
+      chatForm.querySelector("button").disabled = isDisabled;
+
+      messageInput.placeholder = !isPowered
+        ? "SYSTEM OFFLINE"
+        : !isKeySet
+          ? "PLEASE ENTER API KEY"
+          : isLoading
+            ? "PROCESSING..."
+            : "ENTER QUERY...";
+    }
+  </script>
+</body>
+
+</html>
