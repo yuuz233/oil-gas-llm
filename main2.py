@@ -1,4 +1,7 @@
 import os
+import random
+from typing import Dict, Tuple, Any
+import json
 
 import streamlit as st
 from langchain.agents import AgentType, initialize_agent, load_tools
@@ -90,6 +93,71 @@ def vector_search_iris(query: str) -> Dict[str, Any]:
         "metadata": {"source": "IRIS Vector Store"}
     }
 
+def get_default_param_ranges() -> Dict[str, Tuple[float, float]]:
+    """Define default parameter ranges"""
+    return {
+        "days_on_production": (0, 365),
+        "depth": (5000, 12000),
+        "permeability": (1, 1000),
+        "porosity": (0.05, 0.35),
+        "initial_pressure": (2000, 6000),
+        "temperature": (100, 250),
+        "thickness": (20, 200),
+        "initial_water_saturation": (0.1, 0.9),
+        "water_cut": (0, 0.8),
+        "flowing_pressure": (500, 4000),
+    }
+
+def generate_random_value(param_range: Tuple[float, float]) -> float:
+    """Generate a random value within the given range"""
+    min_val, max_val = param_range
+    if isinstance(min_val, int) and isinstance(max_val, int):
+        return random.randint(min_val, max_val)
+    return random.uniform(min_val, max_val)
+
+def execute_model(query: str) -> str:
+    """
+    Execute the model with interactive parameter generation
+    """
+    param_ranges = get_default_param_ranges()
+    generated_params = {}
+    
+    # Initialize chat
+    st.write("Let's generate parameters for the model.")
+    st.write("I'll generate random values, but you can adjust them if needed.")
+    
+    # Generate and potentially modify each parameter
+    for param, value_range in param_ranges.items():
+        # Generate initial random value
+        initial_value = generate_random_value(value_range)
+        
+        # Display current parameter and value
+        st.write(f"\n📊 Parameter: {param}")
+        st.write(f"Generated value: {initial_value:.2f}")
+        st.write(f"Valid range: {value_range[0]} to {value_range[1]}")
+        
+        # Ask if user wants to modify
+        if st.button(f"Modify {param}?", key=f"modify_{param}"):
+            new_value = st.number_input(
+                f"Enter new value for {param}",
+                min_value=float(value_range[0]),
+                max_value=float(value_range[1]),
+                value=float(initial_value)
+            )
+            generated_params[param] = new_value
+        else:
+            generated_params[param] = initial_value
+        
+        st.markdown("---")
+    
+    # Format the results as JSON
+    result = json.dumps(generated_params, indent=2)
+    
+    # Display final parameters
+    st.write("🎯 Final Parameters:")
+    st.json(generated_params)
+    
+    return f"Model execution completed with parameters: {result}"
 
 # Set page config
 st.set_page_config(
@@ -144,10 +212,17 @@ else:
             description="Use this tool to perform vector similarity search in the IRIS database for finding related information and patterns."
         )
 
+        model_execution_tool = Tool(
+            name="ExecuteModel",
+            func=execute_model,
+            description="Use this tool to execute the model with interactive parameter generation. "
+                        "It will help generate and customize model parameters through conversation."
+        )
+
         # Initialize the agent
         agent = initialize_agent(
             llm=llm,
-            tools=[retrieval_tool, external_model_tool, iris_search_tool],
+            tools=[retrieval_tool, model_execution_tool, iris_search_tool],
             agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
             memory=memory,
             verbose=True
