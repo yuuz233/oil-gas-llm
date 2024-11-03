@@ -12,6 +12,7 @@ import fitz
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain_text_splitters import CharacterTextSplitter
+from typing import List, Dict, Any
 DEV_API_KEY = "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"
 
 
@@ -38,15 +39,14 @@ def load_pdfs_from_directory(directory):
     return pdf_documents
 
 
-pdf_directory = "documents"
+pdf_directory = os.path.dirname(os.path.abspath(__file__))
 print("Loading pdf")
 pdf_docs = load_pdfs_from_directory(pdf_directory)
 print("pdf loaded")
 
 
 def setup_vector_store(docs):
-    embeddings = OpenAIEmbeddings(
-        openai_api_key="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")
+    embeddings = OpenAIEmbeddings(openai_api_key=DEV_API_KEY)
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     split_docs = text_splitter.split_documents(docs)
     vector_store = FAISS.from_documents(split_docs, embeddings)
@@ -60,9 +60,11 @@ You are an assistant that can either:
 1. Retrieve documents to answer factual questions.
 2. Run a surrogate model for tasks requiring computation.
 3. Run a simulation model for tasks requiring computation.
+4. Perform vector similarity search using InterSystems IRIS for finding related data.
 
 Decide which action to take based on the user's question.
 If the question is factual, retrieve documents. If it requires computation, run the model.
+For finding similar or related information, use the IRIS vector search.
 Question: {question}
 """
 
@@ -73,6 +75,20 @@ prompt_template = PromptTemplate(
 def external_model_run(question):
     # Replace this with the actual external model logic
     return "Running external model for computational query."
+
+
+def vector_search_iris(query: str) -> Dict[str, Any]:
+    """
+    Placeholder for InterSystems IRIS vector search implementation
+    """
+    # This would be replaced with actual IRIS vector search logic
+    return {
+        "results": [
+            {"content": "Sample search result 1", "similarity": 0.95},
+            {"content": "Sample search result 2", "similarity": 0.85}
+        ],
+        "metadata": {"source": "IRIS Vector Store"}
+    }
 
 
 # Set page config
@@ -119,13 +135,19 @@ else:
         external_model_tool = Tool(
             name="RunExternalModel",
             func=external_model_run,
-            description="Use this tool to run external models for computational tasks."
+            description="Use this tool to run external models for computational tasks, or to generate ideas for simulation runs."
+        )
+
+        iris_search_tool = Tool(
+            name="IRISVectorSearch",
+            func=vector_search_iris,
+            description="Use this tool to perform vector similarity search in the IRIS database for finding related information and patterns."
         )
 
         # Initialize the agent
         agent = initialize_agent(
             llm=llm,
-            tools=[retrieval_tool, external_model_tool],
+            tools=[retrieval_tool, external_model_tool, iris_search_tool],
             agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
             memory=memory,
             verbose=True
